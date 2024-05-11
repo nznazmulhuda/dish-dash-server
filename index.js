@@ -28,7 +28,9 @@ async function run() {
         await client.connect();
 
         const userDB = client.db("DishDashDB").collection("users");
+        const galleryDB = client.db("DishDashDB").collection("gallery");
 
+        // users email and name service
         app.get("/users", async (req, res) => {
             const cursor = await userDB.find().toArray();
             res.send(cursor);
@@ -37,6 +39,18 @@ async function run() {
         app.post("/users", async (req, res) => {
             const user = req.body;
             const result = await userDB.insertOne(user);
+            res.send(result);
+        });
+
+        // gallery service
+        app.get("/gallery", async (req, res) => {
+            const cursor = await galleryDB.find().toArray();
+            res.send(cursor);
+        });
+
+        app.post("/gallery", async (req, res) => {
+            const data = req.body;
+            const result = await galleryDB.insertOne(data);
             res.send(result);
         });
 
