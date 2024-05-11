@@ -29,6 +29,7 @@ async function run() {
 
         const userDB = client.db("DishDashDB").collection("users");
         const galleryDB = client.db("DishDashDB").collection("gallery");
+        const foodDB = client.db("DishDashDB").collection("foods");
 
         // users email and name service
         app.get("/users", async (req, res) => {
@@ -51,6 +52,24 @@ async function run() {
         app.post("/gallery", async (req, res) => {
             const data = req.body;
             const result = await galleryDB.insertOne(data);
+            res.send(result);
+        });
+
+        // add food service
+        app.get("/foods", async (req, res) => {
+            const email = req.query.email;
+            if (email) {
+                const cursor = foodDB.find({ email: email }).toArray();
+            } else {
+                const cursor = foodDB.find().toArray();
+            }
+            res.send(cursor);
+        });
+
+        app.post("/foods", async (req, res) => {
+            const food = req.body;
+            food.purchase = 0;
+            const result = await foodDB.insertOne(food);
             res.send(result);
         });
 
