@@ -58,12 +58,25 @@ async function run() {
         // add food service
         app.get("/foods", async (req, res) => {
             const email = req.query.email;
+            const search = req.query.search;
             if (email) {
-                const cursor = foodDB.find({ email: email }).toArray();
+                const cursor = await foodDB.find({ email: email }).toArray();
+                return res.send(cursor);
+            } else if (search) {
+                const query = search.charAt().toUpperCase() + search.slice(1);
+                const cursor = await foodDB
+                    .find({
+                        $or: [
+                            { foodCategory: { $eq: query } },
+                            { foodName: { $eq: query } },
+                        ],
+                    })
+                    .toArray();
+                return res.send(cursor);
             } else {
-                const cursor = foodDB.find().toArray();
+                const cursor = await foodDB.find().toArray();
+                return res.send(cursor);
             }
-            res.send(cursor);
         });
 
         app.post("/foods", async (req, res) => {
