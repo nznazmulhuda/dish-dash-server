@@ -10,7 +10,7 @@ app.use(cors());
 
 // server
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pbmq8lu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -59,6 +59,7 @@ async function run() {
         app.get("/foods", async (req, res) => {
             const email = req.query.email;
             const search = req.query.search;
+            const id = req.query.id;
             if (email) {
                 const cursor = await foodDB.find({ email: email }).toArray();
                 return res.send(cursor);
@@ -73,6 +74,11 @@ async function run() {
                     })
                     .toArray();
                 return res.send(cursor);
+            } else if (id) {
+                const cursor = await foodDB
+                    .find({ _id: new ObjectId(id) })
+                    .toArray();
+                res.send(cursor);
             } else {
                 const cursor = await foodDB.find().toArray();
                 return res.send(cursor);
