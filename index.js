@@ -30,6 +30,7 @@ async function run() {
         const userDB = client.db("DishDashDB").collection("users");
         const galleryDB = client.db("DishDashDB").collection("gallery");
         const foodDB = client.db("DishDashDB").collection("foods");
+        const purchaseDB = client.db("DishDashDB").collection("purchase");
 
         // users email and name service
         app.get("/users", async (req, res) => {
@@ -111,6 +112,27 @@ async function run() {
             const food = req.body;
             food.purchase = 0;
             const result = await foodDB.insertOne(food);
+            res.send(result);
+        });
+
+        // purchase food service
+        app.get("/purchase-food", async (req, res) => {
+            const email = req.query.email;
+            const cursor = await purchaseDB.find({ email: email }).toArray();
+            res.send(cursor);
+        });
+
+        app.post("/purchase-food", async (req, res) => {
+            const food = req.body;
+            const result = await purchaseDB.insertOne(food);
+            res.send(result);
+        });
+
+        // delete food service
+        app.delete("/delete", async (req, res) => {
+            const id = req.query.id;
+            console.log(id);
+            const result = purchaseDB.deleteOne({ _id: new ObjectId(id) });
             res.send(result);
         });
 
