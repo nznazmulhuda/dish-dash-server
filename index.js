@@ -1,7 +1,7 @@
+const express = require("express");
+const cors = require("cors");
 const app = express();
 require("dotenv").config();
-const cors = require("cors");
-const express = require("express");
 const port = process.env.PORT || 5000;
 
 /*****************************************************/
@@ -107,7 +107,6 @@ async function run() {
             } else if (totalPage) {
                 // get total data length
                 const cursor = await foodDB.find().toArray();
-                console.log(cursor.length);
                 const pages = cursor.length;
                 return res.send({ pages });
             } else if (activePage) {
@@ -144,6 +143,18 @@ async function run() {
 
         app.post("/purchase-food", async (req, res) => {
             const food = req.body;
+            const id = req.query.id;
+            const { quantity } = food;
+            console.log(quantity);
+            foodDB.updateOne(
+                { _id: new ObjectId(id) },
+                {
+                    $inc: {
+                        foodQuantity: -quantity,
+                        purchase: +quantity,
+                    },
+                }
+            );
             const result = await purchaseDB.insertOne(food);
             res.send(result);
         });
