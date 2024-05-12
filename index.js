@@ -60,10 +60,16 @@ async function run() {
             const email = req.query.email;
             const search = req.query.search;
             const id = req.query.id;
+            const totalPage = req.query.page;
+            const activePage = req.query.activePage;
+            const pageNo = req.query.pageNo;
+            
             if (email) {
+                // filter data using email
                 const cursor = await foodDB.find({ email: email }).toArray();
                 return res.send(cursor);
             } else if (search) {
+                // search function
                 const query = search.charAt().toUpperCase() + search.slice(1);
                 const cursor = await foodDB
                     .find({
@@ -75,11 +81,27 @@ async function run() {
                     .toArray();
                 return res.send(cursor);
             } else if (id) {
+                // filter data using id
                 const cursor = await foodDB
                     .find({ _id: new ObjectId(id) })
                     .toArray();
                 res.send(cursor);
+            } else if (totalPage) {
+                // get total data length
+                const cursor = await foodDB.find().toArray();
+                console.log(cursor.length);
+                const pages = cursor.length;
+                return res.send({ pages });
+            } else if (activePage) {
+                // Pagination
+                const cursor = await foodDB
+                    .find()
+                    .skip((pageNo - 1) * 10)
+                    .limit(10)
+                    .toArray();
+                return res.send(cursor);
             } else {
+                // get all food data
                 const cursor = await foodDB.find().toArray();
                 return res.send(cursor);
             }
