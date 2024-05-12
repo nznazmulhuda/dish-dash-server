@@ -63,7 +63,7 @@ async function run() {
             const totalPage = req.query.page;
             const activePage = req.query.activePage;
             const pageNo = req.query.pageNo;
-            
+
             if (email) {
                 // filter data using email
                 const cursor = await foodDB.find({ email: email }).toArray();
@@ -96,8 +96,8 @@ async function run() {
                 // Pagination
                 const cursor = await foodDB
                     .find()
-                    .skip((pageNo - 1) * 10)
-                    .limit(10)
+                    .skip((pageNo - 1) * 9)
+                    .limit(9)
                     .toArray();
                 return res.send(cursor);
             } else {
