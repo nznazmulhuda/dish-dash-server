@@ -1,14 +1,19 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
 const app = express();
+require("dotenv").config();
+const cors = require("cors");
+const express = require("express");
 const port = process.env.PORT || 5000;
 
-// Middleware
-app.use(express.json());
-app.use(cors());
+/*****************************************************/
+/********************* Middleware ********************/
+/*****************************************************/
 
-// server
+app.use(cors());
+app.use(express.json());
+
+/*****************************************************/
+/*********************** Server **********************/
+/*****************************************************/
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pbmq8lu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -24,15 +29,21 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
+
+        /*****************************************************/
+        /******************* DB Collection's *****************/
+        /*****************************************************/
 
         const userDB = client.db("DishDashDB").collection("users");
         const galleryDB = client.db("DishDashDB").collection("gallery");
         const foodDB = client.db("DishDashDB").collection("foods");
         const purchaseDB = client.db("DishDashDB").collection("purchase");
 
-        // users email and name service
+        /*****************************************************/
+        /************************ Users **********************/
+        /*****************************************************/
+
         app.get("/users", async (req, res) => {
             const cursor = await userDB.find().toArray();
             res.send(cursor);
@@ -44,7 +55,10 @@ async function run() {
             res.send(result);
         });
 
-        // gallery service
+        /*****************************************************/
+        /********************** Gallery **********************/
+        /*****************************************************/
+
         app.get("/gallery", async (req, res) => {
             const cursor = await galleryDB.find().toArray();
             res.send(cursor);
@@ -56,7 +70,10 @@ async function run() {
             res.send(result);
         });
 
-        // add food service
+        /*****************************************************/
+        /************************ Food ***********************/
+        /*****************************************************/
+
         app.get("/foods", async (req, res) => {
             const email = req.query.email;
             const search = req.query.search;
@@ -115,7 +132,10 @@ async function run() {
             res.send(result);
         });
 
-        // purchase food service
+        /*****************************************************/
+        /********************** Purchase *********************/
+        /*****************************************************/
+
         app.get("/purchase-food", async (req, res) => {
             const email = req.query.email;
             const cursor = await purchaseDB.find({ email: email }).toArray();
@@ -128,12 +148,43 @@ async function run() {
             res.send(result);
         });
 
-        // delete food service
+        /*****************************************************/
+        /*********************** Update **********************/
+        /*****************************************************/
+
+        app.put("/update", async (req, res) => {
+            const id = req.query.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updateFood = req.body;
+            const food = {
+                $set: {
+                    url: updateFood.url,
+                    foodName: updateFood.foodName,
+                    foodCategory: updateFood.foodCategory,
+                    foodPrice: updateFood.foodPrice,
+                    foodQuantity: updateFood.foodQuantity,
+                    about: updateFood.about,
+                },
+            };
+            const result = await foodDB.updateOne(filter, food, options);
+            res.send(result);
+        });
+
+        /*****************************************************/
+        /*********************** Delete **********************/
+        /*****************************************************/
+
         app.delete("/delete", async (req, res) => {
             const id = req.query.id;
-            console.log(id);
-            const result = purchaseDB.deleteOne({ _id: new ObjectId(id) });
-            res.send(result);
+            const DB = req.query.db;
+            if (DB === "purchaseDB") {
+                const result = purchaseDB.deleteOne({ _id: new ObjectId(id) });
+                res.send(result);
+            } else if (DB === "foodDB") {
+                const result = foodDB.deleteOne({ _id: new ObjectId(id) });
+                res.send(result);
+            }
         });
 
         // Send a ping to confirm a successful connection
