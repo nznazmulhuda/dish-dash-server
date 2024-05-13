@@ -2,14 +2,41 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const port = process.env.PORT || 5000;
+const cookieParser = require("cookie-parser");
 
 /*****************************************************/
 /********************* Middleware ********************/
 /*****************************************************/
 
-app.use(cors());
+app.use(
+    cors({
+        origin: ["http://localhost:3000"],
+        credentials: true,
+    })
+);
+app.use(cookieParser());
 app.use(express.json());
+
+/*****************************************************/
+/***************** Custom Middelware *****************/
+/*****************************************************/
+
+const verifyToken = async (req, res, next) => {
+    const token = req.cookies?.token;
+    if (!token) {
+        return res.status(401).send({ message: "unauthorized access" });
+    }
+
+    jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.user = decoded;
+        next();
+    });
+};
 
 /*****************************************************/
 /*********************** Server **********************/
@@ -30,6 +57,24 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         await client.connect();
+
+        /*****************************************************/
+        /************************ JWT ************************/
+        /*****************************************************/
+
+        app.post("/token", async (req, res) => {
+            console.log(process.env.SECRET_KEY);
+            const user = req.body;
+            const token = jwt.sign(user, process.env.SECRET_KEY, {
+                expiresIn: "1h",
+            });
+
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: false,
+                sameSite: "strict",
+            }).send({ success: true });
+        });
 
         /*****************************************************/
         /******************* DB Collection's *****************/
@@ -75,16 +120,11 @@ async function run() {
         /*****************************************************/
 
         app.get("/foods", async (req, res) => {
-            const email = req.query.email;
             const id = req.query.id;
             const totalPage = req.query.page;
             const activePage = req.query.activePage;
 
-            if (email) {
-                // filter data using email
-                const cursor = await foodDB.find({ email: email }).toArray();
-                return res.send(cursor);
-            } else if (id) {
+            if (id) {
                 // filter data using id
                 const cursor = await foodDB
                     .find({ _id: new ObjectId(id) })
@@ -106,6 +146,22 @@ async function run() {
             } else {
                 // get all food data
                 const cursor = await foodDB.find().toArray();
+                return res.send(cursor);
+            }
+        });
+
+        app.get("/myFood/:email", verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const verifyEmail = req?.user?.email;
+            console.log(email, verifyEmail);
+            if (email) {
+                if (verifyEmail !== email) {
+                    return res
+                        .status(403)
+                        .send({ message: "forbidden access" });
+                }
+                // filter data using email
+                const cursor = await foodDB.find({ email: email }).toArray();
                 return res.send(cursor);
             }
         });
@@ -151,10 +207,14 @@ async function run() {
         /********************** Purchase *********************/
         /*****************************************************/
 
-        app.get("/purchase-food", async (req, res) => {
-            const email = req.query.email;
-            const cursor = await purchaseDB.find({ email: email }).toArray();
-            res.send(cursor);
+        app.get("/purchase-food/:email", verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const verifyEmail = req?.user?.email;
+            if (verifyEmail !== email) {
+                return res.status(403).send({ message: "forbidden access" });
+            }
+            const result = await purchaseDB.find({ email: { $eq: email } }).toArray();
+            res.send(result);
         });
 
         app.post("/purchase-food", async (req, res) => {
