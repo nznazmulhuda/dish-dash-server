@@ -213,7 +213,9 @@ async function run() {
             if (verifyEmail !== email) {
                 return res.status(403).send({ message: "forbidden access" });
             }
-            const result = await purchaseDB.find({ email: { $eq: email } }).toArray();
+            const result = await purchaseDB
+                .find({ email: { $eq: email } })
+                .toArray();
             res.send(result);
         });
 
@@ -284,6 +286,10 @@ async function run() {
                 const result = foodDB.deleteOne({ _id: new ObjectId(id) });
                 res.send(result);
             }
+        });
+
+        app.get("/logout", (req, res) => {
+            res.clearCookie("token", { maxAge: 0 }).send({ success: true });
         });
 
         // Send a ping to confirm a successful connection
