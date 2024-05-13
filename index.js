@@ -22,7 +22,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
-        strict: true,
+        strict: false,
         deprecationErrors: true,
     },
 });
@@ -76,27 +76,13 @@ async function run() {
 
         app.get("/foods", async (req, res) => {
             const email = req.query.email;
-            const search = req.query.search;
             const id = req.query.id;
             const totalPage = req.query.page;
             const activePage = req.query.activePage;
-            const pageNo = req.query.pageNo;
 
             if (email) {
                 // filter data using email
                 const cursor = await foodDB.find({ email: email }).toArray();
-                return res.send(cursor);
-            } else if (search) {
-                // search function
-                const query = search.charAt().toUpperCase() + search.slice(1);
-                const cursor = await foodDB
-                    .find({
-                        $or: [
-                            { foodCategory: { $eq: query } },
-                            { foodName: { $eq: query } },
-                        ],
-                    })
-                    .toArray();
                 return res.send(cursor);
             } else if (id) {
                 // filter data using id
@@ -113,7 +99,7 @@ async function run() {
                 // Pagination
                 const cursor = await foodDB
                     .find()
-                    .skip((pageNo - 1) * 9)
+                    .skip((activePage - 1) * 9)
                     .limit(9)
                     .toArray();
                 return res.send(cursor);
@@ -132,6 +118,36 @@ async function run() {
         });
 
         /*****************************************************/
+        /************************ Search *********************/
+        /*****************************************************/
+
+        app.get("/search", async (req, res) => {
+            const search = req.query.search;
+            if (search === "all") {
+                const result = await foodDB.find().limit(9).toArray();
+                return res.send(result);
+            } else {
+                const agg = [
+                    {
+                        $search: {
+                            index: "search",
+                            text: {
+                                query: search,
+                                path: {
+                                    wildcard: "*",
+                                },
+                                fuzzy: {},
+                            },
+                        },
+                    },
+                ];
+                const cursor = foodDB.aggregate(agg);
+                const result = await cursor.toArray();
+                return res.send(result);
+            }
+        });
+
+        /*****************************************************/
         /********************** Purchase *********************/
         /*****************************************************/
 
@@ -145,7 +161,6 @@ async function run() {
             const food = req.body;
             const id = req.query.id;
             const { quantity } = food;
-            console.log(quantity);
             foodDB.updateOne(
                 { _id: new ObjectId(id) },
                 {
