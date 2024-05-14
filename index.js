@@ -22,7 +22,6 @@ app.use(express.json());
 /*****************************************************/
 /***************** Custom Middelware *****************/
 /*****************************************************/
-
 const verifyToken = async (req, res, next) => {
     const token = req.cookies?.token;
     if (!token) {
@@ -41,7 +40,6 @@ const verifyToken = async (req, res, next) => {
 /*****************************************************/
 /*********************** Server **********************/
 /*****************************************************/
-
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pbmq8lu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -61,9 +59,7 @@ async function run() {
         /*****************************************************/
         /************************ JWT ************************/
         /*****************************************************/
-
         app.post("/token", async (req, res) => {
-            console.log(process.env.SECRET_KEY);
             const user = req.body;
             const token = jwt.sign(user, process.env.SECRET_KEY, {
                 expiresIn: "1h",
@@ -79,7 +75,6 @@ async function run() {
         /*****************************************************/
         /******************* DB Collection's *****************/
         /*****************************************************/
-
         const userDB = client.db("DishDashDB").collection("users");
         const galleryDB = client.db("DishDashDB").collection("gallery");
         const foodDB = client.db("DishDashDB").collection("foods");
@@ -88,7 +83,6 @@ async function run() {
         /*****************************************************/
         /************************ Users **********************/
         /*****************************************************/
-
         app.get("/users", async (req, res) => {
             const cursor = await userDB.find().toArray();
             res.send(cursor);
@@ -103,7 +97,6 @@ async function run() {
         /*****************************************************/
         /********************** Gallery **********************/
         /*****************************************************/
-
         app.get("/gallery", async (req, res) => {
             const cursor = await galleryDB.find().toArray();
             res.send(cursor);
@@ -118,7 +111,6 @@ async function run() {
         /*****************************************************/
         /************************ Food ***********************/
         /*****************************************************/
-
         app.get("/foods", async (req, res) => {
             const id = req.query.id;
             const totalPage = req.query.page;
@@ -153,7 +145,6 @@ async function run() {
         app.get("/myFood/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const verifyEmail = req?.user?.email;
-            console.log(email, verifyEmail);
             if (email) {
                 if (verifyEmail !== email) {
                     return res
@@ -176,7 +167,6 @@ async function run() {
         /*****************************************************/
         /************************ Search *********************/
         /*****************************************************/
-
         app.get("/search", async (req, res) => {
             const search = req.query.search;
             if (search === "all") {
@@ -206,7 +196,6 @@ async function run() {
         /*****************************************************/
         /********************** Purchase *********************/
         /*****************************************************/
-
         app.get("/purchase-food/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const verifyEmail = req?.user?.email;
@@ -239,7 +228,6 @@ async function run() {
         /*****************************************************/
         /********************** Top Food *********************/
         /*****************************************************/
-
         app.get("/top-food", async (req, res) => {
             const result = await foodDB
                 .find()
@@ -250,9 +238,85 @@ async function run() {
         });
 
         /*****************************************************/
+        /********************** Filtering ********************/
+        /*****************************************************/
+        app.get("/filter", async (req, res) => {
+            const price = req.query.price;
+            const category = req.query.category;
+            console.log({ price, category });
+            if (
+                (price === "default" && category === "default") ||
+                (price === "null" && category === "null")
+            ) {
+                const result = await foodDB.find().toArray();
+                return res.send(result);
+            } else if (
+                price === "highToLow" &&
+                (category === "default" || category === "null")
+            ) {
+                const result = await foodDB
+                    .find()
+                    .sort({ foodPrice: -1 })
+                    .toArray();
+                return res.send(result);
+            } else if (
+                price === "lowToHigh" &&
+                (category === "default" || category === "null")
+            ) {
+                const result = await foodDB
+                    .find()
+                    .sort({ foodPrice: +1 })
+                    .toArray();
+                return res.send(result);
+            } else if (
+                (price === "highToLow" || price === "null") &&
+                category !== "default" &&
+                category !== "null"
+            ) {
+                const filterFood = await foodDB
+                    .find()
+                    .sort({ foodPrice: -1 })
+                    .toArray();
+                const result = filterFood.filter(
+                    (food) => food.foodCategory === category
+                );
+                return res.send(result);
+            } else if (
+                (price === "lowToHigh" || price === "null") &&
+                category !== "default" &&
+                category !== "null"
+            ) {
+                const filterFood = await foodDB
+                    .find()
+                    .sort({ foodPrice: +1 })
+                    .toArray();
+                const result = filterFood.filter(
+                    (food) => food.foodCategory === category
+                );
+                return res.send(result);
+            } else {
+                const result = await foodDB.find().toArray();
+                return res.send(result);
+            }
+        });
+
+        /*****************************************************/
+        /********************** Category ********************/
+        /*****************************************************/
+        app.get("/category", async (req, res) => {
+            let result = [];
+            const allData = await foodDB.find().toArray();
+            allData.filter((data) => {
+                if (!result.includes(data.foodCategory)) {
+                    result.push(data.foodCategory);
+                }
+            });
+            res.send(result);
+        });
+
+        /*****************************************************/
         /*********************** Update **********************/
         /*****************************************************/
-
         app.put("/update", async (req, res) => {
             const id = req.query.id;
             const filter = { _id: new ObjectId(id) };
@@ -275,7 +339,6 @@ async function run() {
         /*****************************************************/
         /*********************** Delete **********************/
         /*****************************************************/
-
         app.delete("/delete", async (req, res) => {
             const id = req.query.id;
             const DB = req.query.db;
