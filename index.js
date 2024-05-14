@@ -12,10 +12,19 @@ const cookieParser = require("cookie-parser");
 
 app.use(
     cors({
-        origin: ["http://localhost:3000"],
+        origin: [
+            "http://localhost:3000",
+            "https://dish-dash-restaurant.web.app",
+            "https://dish-dash-restaurant.firebaseapp.com/",
+        ],
         credentials: true,
     })
 );
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
 app.use(cookieParser());
 app.use(express.json());
 
@@ -47,14 +56,14 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
-        strict: false,
+        strict: true,
         deprecationErrors: true,
     },
 });
 
 async function run() {
     try {
-        await client.connect();
+        // await client.connect();
 
         /*****************************************************/
         /************************ JWT ************************/
@@ -65,11 +74,7 @@ async function run() {
                 expiresIn: "1h",
             });
 
-            res.cookie("token", token, {
-                httpOnly: true,
-                secure: false,
-                sameSite: "strict",
-            }).send({ success: true });
+            res.cookie("token", token, cookieOptions).send({ success: true });
         });
 
         /*****************************************************/
@@ -98,8 +103,24 @@ async function run() {
         /********************** Gallery **********************/
         /*****************************************************/
         app.get("/gallery", async (req, res) => {
-            const cursor = await galleryDB.find().toArray();
-            res.send(cursor);
+            // const cursor = await galleryDB.find().toArray();
+            const page = req.query.page;
+            const allFood = await galleryDB.find().toArray();
+            const totalFood = allFood.length;
+            const totalPage = Math.ceil(totalFood / 11);
+            if (page > 1) {
+                if (totalPage >= page) {
+                    const result = await galleryDB
+                        .find()
+                        .skip((page - 1) * 11)
+                        .limit(11)
+                        .toArray();
+                    return res.send(result);
+                }
+                return res.send({ success: true });
+            }
+            const result = await galleryDB.find().toArray();
+            return res.send(result.reverse());
         });
 
         app.post("/gallery", async (req, res) => {
@@ -243,7 +264,6 @@ async function run() {
         app.get("/filter", async (req, res) => {
             const price = req.query.price;
             const category = req.query.category;
-            console.log({ price, category });
             if (
                 (price === "default" && category === "default") ||
                 (price === "null" && category === "null")
@@ -352,14 +372,16 @@ async function run() {
         });
 
         app.get("/logout", (req, res) => {
-            res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+            res.clearCookie("token", { ...cookieOptions, maxAge: 0 }).send({
+                success: true,
+            });
         });
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log(
-            "Pinged your deployment. You successfully connected to MongoDB!"
-        );
+        // await client.db("admin").command({ ping: 1 });
+        // console.log(
+        //     "Pinged your deployment. You successfully connected to MongoDB!"
+        // );
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
