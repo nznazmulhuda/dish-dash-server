@@ -71,22 +71,12 @@ async function run() {
         /*****************************************************/
         app.post("/token", async (req, res) => {
             const user = req.body;
-            console.log(user);
             const token = jwt.sign(user, process.env.SECRET_KEY, {
                 expiresIn: "1h",
             });
 
             res.cookie("token", token, cookieOptions).send({ success: true });
         });
-
-        // app.post("/jwt", async (req, res) => {
-        //     const user = req.body;
-        //     const token = jwt.sign(user, process.env.SECRET_KEY, {
-        //         expiresIn: "5h",
-        //     });
-        //     console.log(token);
-        //     res.cookie("token", token, cookieOptions).send({ success: true });
-        // });
 
         /*****************************************************/
         /******************* DB Collection's *****************/
