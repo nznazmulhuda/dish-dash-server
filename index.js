@@ -15,7 +15,7 @@ app.use(
         origin: [
             "http://localhost:3000",
             "https://dish-dash-restaurant.web.app",
-            "https://dish-dash-restaurant.firebaseapp.com/",
+            "https://dish-dash-restaurant.firebaseapp.com",
         ],
         credentials: true,
     })
@@ -57,7 +57,7 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
-        strict: true,
+        strict: false,
         deprecationErrors: true,
     },
 });
@@ -71,12 +71,22 @@ async function run() {
         /*****************************************************/
         app.post("/token", async (req, res) => {
             const user = req.body;
+            console.log(user);
             const token = jwt.sign(user, process.env.SECRET_KEY, {
                 expiresIn: "1h",
             });
 
             res.cookie("token", token, cookieOptions).send({ success: true });
         });
+
+        // app.post("/jwt", async (req, res) => {
+        //     const user = req.body;
+        //     const token = jwt.sign(user, process.env.SECRET_KEY, {
+        //         expiresIn: "5h",
+        //     });
+        //     console.log(token);
+        //     res.cookie("token", token, cookieOptions).send({ success: true });
+        // });
 
         /*****************************************************/
         /******************* DB Collection's *****************/
@@ -104,7 +114,6 @@ async function run() {
         /********************** Gallery **********************/
         /*****************************************************/
         app.get("/gallery", async (req, res) => {
-            // const cursor = await galleryDB.find().toArray();
             const page = req.query.page;
             const allFood = await galleryDB.find().toArray();
             const totalFood = allFood.length;
@@ -116,11 +125,11 @@ async function run() {
                         .skip((page - 1) * 11)
                         .limit(11)
                         .toArray();
-                    return res.send(result);
+                    return res.send(result.reverse());
                 }
                 return res.send({ success: true });
             }
-            const result = await galleryDB.find().toArray();
+            const result = await galleryDB.find().limit(11).toArray();
             return res.send(result.reverse());
         });
 
