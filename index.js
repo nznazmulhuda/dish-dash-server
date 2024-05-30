@@ -18,7 +18,7 @@ app.use(
             "https://dish-dash-restaurant.firebaseapp.com",
         ],
         credentials: true,
-    })
+    }),
 );
 app.use(cookieParser());
 app.use(express.json());
@@ -85,6 +85,7 @@ async function run() {
         const galleryDB = client.db("DishDashDB").collection("gallery");
         const foodDB = client.db("DishDashDB").collection("foods");
         const purchaseDB = client.db("DishDashDB").collection("purchase");
+        const eventDB = client.db("DishDashDB").collection("events");
 
         /*****************************************************/
         /************************ Users **********************/
@@ -240,7 +241,7 @@ async function run() {
                         foodQuantity: -quantity,
                         purchase: +quantity,
                     },
-                }
+                },
             );
             const result = await purchaseDB.insertOne(food);
             res.send(result);
@@ -298,7 +299,7 @@ async function run() {
                     .sort({ foodPrice: -1 })
                     .toArray();
                 const result = filterFood.filter(
-                    (food) => food.foodCategory === category
+                    (food) => food.foodCategory === category,
                 );
                 return res.send(result);
             } else if (
@@ -311,7 +312,7 @@ async function run() {
                     .sort({ foodPrice: +1 })
                     .toArray();
                 const result = filterFood.filter(
-                    (food) => food.foodCategory === category
+                    (food) => food.foodCategory === category,
                 );
                 return res.send(result);
             } else {
@@ -375,6 +376,12 @@ async function run() {
             res.clearCookie("token", { ...cookieOptions, maxAge: 0 }).send({
                 success: true,
             });
+        });
+
+        app.post("/events", async (req, res) => {
+            const event = req.body;
+            const result = await eventDB.insertOne(event);
+            res.send(result);
         });
     } finally {
         // Ensures that the client will close when you finish/error
